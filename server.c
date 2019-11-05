@@ -47,5 +47,35 @@ main () {
         close(sock_desc);
         return 0;
     }
+    int buf[10];
+    int k;
+    int Second_sock_desc = socket(AF_INET,SOCK_STREAM,0);
+    if (Second_sock_desc == -1)
+    {
+        printf("cannot create socket!\n");
+        return 0;
+    }
+    //nastavenie socketu
+    struct sockaddr_in Second_client;
+    memset(&Second_client,0, sizeof(Second_client));
+    Second_client.sin_family = AF_INET;
+    Second_client.sin_addr.s_addr = inet_addr("127.0.0.1");
+    Second_client.sin_port = htons(49836);
+    //pripojenie socketu
+    if(connect(Second_sock_desc,(struct sockaddr*)&Second_client, sizeof(Second_client)) != 0)
+    {
+        printf("cannot conncet to server!\n");
+        close(Second_sock_desc);
+    }
+    k = recv(temp_sock_desc,buf,10,0);
+    if(recv == -1)
+    {
+        printf("\ncannot read from client!\n");
+    }
+    if (recv == 0)
+    {
+        printf("\nclient disconnected\n");
+    }
+    if(k>0)
 
 }

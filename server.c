@@ -67,6 +67,28 @@ main () {
         printf("cannot conncet to server!\n");
         close(Second_sock_desc);
     }
+
+    gets(buf);
+    len = sizeof(buf);
+    p_buf = buf;
+    while(len > 0)
+    {
+       k = send(Second_sock_desc, p_buf,len,0);//posielanie dat
+       if (k == -1)
+       {
+           printf("cannot write to server!\n");
+           break;
+       }
+       p_buf += k;
+       len -= k;
+    }
+    k = send(Second_sock_desc,&c,1,0);
+    if (k == -1)
+    {
+        printf("cannot write to server!\n");
+    }
+
+
     k = recv(temp_sock_desc,buf,10,0);
     if(recv == -1)
     {
@@ -76,6 +98,12 @@ main () {
     {
         printf("\nclient disconnected\n");
     }
-    if(k>0)
+    if(k > 0)
+        printf("%*.*s",k,k,buf);
+    close(temp_sock_desc);
+    close(sock_desc);
+    close(Second_sock_desc);
+    printf("Server disconnected\n");
+    return 0;
 
 }

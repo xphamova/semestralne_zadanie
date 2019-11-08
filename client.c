@@ -9,7 +9,7 @@ int main()
     int Dolna_podhranica,Horna_podhranica;
     int forkval;
 
-    printf("Zadaj rozsah na vypocet, velkost rozsah musi byt delitelna 4 a dolna hranica parna!\n");
+    printf("Zadaj rozsah na vypocet, velkost rozsahu musi byt delitelna 4 a dolna hranica parna!\n");
     scanf("%d %d",&dolna_hranica,&horna_hranica);
     rozsah = horna_hranica - dolna_hranica;
     if( (rozsah % 4 == 0) && (dolna_hranica % 2 == 0))
@@ -53,7 +53,7 @@ int main()
                 Dolna_podhranica = id_klienta*(rozsah/4) + dolna_hranica+1;
                 Horna_podhranica = id_klienta*(rozsah/4) + (rozsah/4) + dolna_hranica;
 
-                      //  printf("Ja som child %d a mam interval %d az %d\n", i, i * 25, i * 25 + 25);
+                       printf("Ja som child %d a mam interval %d az %d\n", id_klienta,Dolna_podhranica,Horna_podhranica);
 
                 exit(1); //zabijanie
 
@@ -62,9 +62,10 @@ int main()
                 printf("\nJa som parent\n"); //server
                 }
 
-            return 0;
+            //return 0;
                 }
           }
-    }
+    } else printf("Zadal si zly interval!\n");
+
     return 0;
 }

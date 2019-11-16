@@ -2,18 +2,18 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <pthread.h>
- void * thread1()
+ void * thread1(void *udaj)
  {
 
      int i,prvocislo=2,j,k=0,l;
      int prvocisla[100];
+     int *hranice=(int *)(udaj); //novy pointer na int
 
-
-    // int Dolna_podhranica = *((int *)udaj);
-    // int Horna_podhranica = *((int *)udaj);
-     for (i=2;i<=50;)
+     int Prve_prvocislo = *(hranice);
+     int Posledne_prvocislo = *(hranice+1);
+     for (i=2;i<=Posledne_prvocislo;)
      {
-         if(prvocislo>=50)
+         if(prvocislo>=Posledne_prvocislo) //aby to skoncilo tak kde malo
              break;
          for(j= 2; j<= prvocislo;j++)
          {
@@ -22,9 +22,9 @@
          }
          if (j == prvocislo)
          {
-             if (prvocislo>=10)
+             if (prvocislo>=Prve_prvocislo) //zapisovanie az od kedy by malo
              {
-                 prvocisla[k] = prvocislo;
+                 prvocisla[k] = prvocislo; // zapisanie prvocisel do pola
                  k++;
              }
              i++;
@@ -98,9 +98,11 @@ int main()
                 int udaje[2];
                 udaje[0]=Dolna_podhranica;
                 udaje[1]=Horna_podhranica;
-               // void *udaj = &udaje[2];
+                void *udaj;
+                udaj=(&udaje);
                 pthread_t tid1;
-                pthread_create(&tid1, NULL, thread1 , NULL);
+                pthread_create(&tid1, NULL, thread1 , udaj);
+                pthread_join(tid1,NULL);
 
                 exit(1); //zabijanie
 

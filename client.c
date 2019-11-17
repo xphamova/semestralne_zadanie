@@ -16,7 +16,7 @@ void * find(void *udaj) {
 
     int Prve_prvocislo = *(hranice); //nahram dolnu hranicu
     int Posledne_prvocislo = *(hranice + 1); //nahram hornu hranicu
-    for (i = 2; i <= Posledne_prvocislo;) //hladam prvocisla
+    for (i =  2; i <= Posledne_prvocislo;) //hladam prvocisla
     {
         if (prvocislo >= Posledne_prvocislo) //aby to skoncilo tak kde malo
             break;

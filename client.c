@@ -6,6 +6,8 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <sys/types.h>
+
 int k=0;
 void * find(void *udaj) {
 
@@ -132,7 +134,7 @@ int main()
                 pthread_join(tid2,&rec2);
                 message=(int*)rec2;
                 printf("vysledok: %d\n",*message);
-                int messages_to_server = *message;
+
                 //pipojenie na sockety..............................................................................
 
                     // vytvorenie socketu
@@ -154,21 +156,8 @@ int main()
                     printf("cannot conncet to server\n");
                     close(sock_desc);
                 }
-                int len = sizeof(messages_to_server);
-                int sendbytes;
-                int *p_buf;
-                p_buf = messages_to_server;
-                while (len > 0)
-                {
-                    sendbytes = send(sock_desc,p_buf,len,0); // posielanie dat
-                    if (sendbytes == -1)
-                    {
-                        printf("cannot write to server\n");
-                        break;
-                    }
-                    p_buf += sendbytes;
-                    len -= sendbytes;
-                }
+
+                send(sock_desc,message, sizeof(message),0); // posielanie dat
 
                 exit(1); //zabijanie
 
@@ -177,8 +166,6 @@ int main()
                 printf("\nJa som parent\n"); //server
                     //vytvorenie socketu
                     int sock_desc = socket(AF_INET,SOCK_STREAM,0);
-                    char c='\n';
-                    char *p_buf;
                     if(sock_desc == -1)
                     {
                         printf("cannot create socket!\n");
@@ -202,6 +189,32 @@ int main()
                         close(sock_desc);
                         return 0;
                     }
+                    int client,client1,client2,client3;
+                   client= accept(sock_desc,NULL,NULL);
+                    client1= accept(sock_desc,NULL,NULL);
+                    client2= accept(sock_desc,NULL,NULL);
+                    client3= accept(sock_desc,NULL,NULL);
+
+
+
+
+
+                    int client_response=0,client_response_1,client_response_2,client_response_3;
+
+                        recv(client1,&client_response, sizeof(client_response),0);
+                        printf("%d  ",client_response);
+                    recv(client,&client_response_1, sizeof(client_response_1),0);
+                    printf("%d  ",client_response_1);
+                    recv(client2,&client_response_2, sizeof(client_response_2),0);
+                    printf("%d  ",client_response_2);
+                    recv(client3,&client_response_3, sizeof(client_response_3),0);
+                    printf("%d  ",client_response_3);
+                    close(sock_desc);
+                    printf("server disconnected\n");
+
+
+
+
 
                 }
 

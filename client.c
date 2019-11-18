@@ -66,7 +66,8 @@ void * find(void *udaj) {
 int main()
  {
 
-    int id_klienta,dolna_hranica,horna_hranica,rozsah,Dolna_podhranica,Horna_podhranica,forkval;
+    int id_klienta,dolna_hranica,horna_hranica,rozsah,Dolna_podhranica,Horna_podhranica,forkval,fd[2],nbytes;
+    pipe(fd);
 
     printf("Zadaj rozsah na vypocet, velkost rozsahu musi byt delitelna 4 a dolna hranica parna!\n");
     scanf("%d %d",&dolna_hranica,&horna_hranica);
@@ -76,9 +77,11 @@ int main()
         forkval = fork();
 
         if (forkval == 0)
-          {                      //proces na vypisanie
-
-            //vypisovac
+          {                     //proces na vypisanie
+            int readbuff;
+            close(fd[1]);
+            nbytes = read(fd[0], (void *) readbuff, sizeof(readbuff));
+            printf("Sucer prvocisel od %d do %d je: %d",dolna_hranica,horna_hranica,readbuff);
             exit(1);
 
           } else
@@ -183,6 +186,8 @@ int main()
                         printf("%d  ",client_response[id]);
                     }
                     printf("\nkonecny vysledok: %d \n",finally_sum);
+                    close(fd[0]);
+                    write(fd[1], finally_sum, sizeof(finally_sum));
 
 
 

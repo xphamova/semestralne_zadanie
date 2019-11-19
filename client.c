@@ -8,22 +8,26 @@
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <sys/shm.h>
-#include <sys/ipc.h>
+//#include <semaphore.h>
+//#include <sys/mman.h>
+
+
 
 int k=0;
 //1.vlakno...................................................................................................................................................
-void * find(void *udaj) {
+void * find(void *input) {
+
 
     int i, prvocislo = 2, j, l;
     int prvocisla[100];
     int *output;
-    int *hranice = (int *) (udaj); //novy pointer na int
+    int *hranice = (int *) (input); //novy pointer na int
 
     int Prve_prvocislo = *(hranice); //nahram dolnu hranicu
     int Posledne_prvocislo = *(hranice + 1); //nahram hornu hranicu
     for (i =  2; i <= Posledne_prvocislo;) //hladam prvocisla
     {
-        if (prvocislo >= Posledne_prvocislo) //aby to skoncilo tak kde malo
+        if (prvocislo >= Posledne_prvocislo+1) //aby to skoncilo tak kde malo
             break;
         for (j = 2; j <= prvocislo; j++) {
             if (prvocislo % j == 0) // zistujem delitelnosti cisla
@@ -31,7 +35,7 @@ void * find(void *udaj) {
         }
         if (j == prvocislo) //
         {
-            if (prvocislo >= Prve_prvocislo) //zapisovanie az od kedy by malo
+            if (prvocislo >= Prve_prvocislo-1) //zapisovanie az od kedy by malo
             {
                 prvocisla[k] = prvocislo; // zapisanie prvocisel do pola
                 k++;
@@ -63,31 +67,38 @@ void * find(void *udaj) {
      return (void*)suma;
  }
 
-
+//sem_t bin_sem;
 //----------------------------------------------------------------------------------------------------------------------
 int main()
  {
 
-    int id_klienta,dolna_hranica,horna_hranica,rozsah,Dolna_podhranica,Horna_podhranica,forkval,nbytes,fd[2];
-    pipe(fd);
+    int id_klienta,dolna_hranica,horna_hranica,rozsah,Dolna_podhranica,Horna_podhranica,forkval;
+   // sem_t mutex;
+  //  sem_init(&mutex,1,0);
 
-    printf("Zadaj rozsah na vypocet, velkost rozsahu musi byt delitelna 4 a dolna hranica parna!\n");
+    printf("Zadaj rozsah na vypocet, velkost rozsahu musi byt delitelna 4!\n");
     scanf("%d %d",&dolna_hranica,&horna_hranica);
     rozsah = horna_hranica - dolna_hranica;
-    if( (rozsah % 4 == 0) && (dolna_hranica % 2 == 0)) //ci je splnena podmienka
+    if( (rozsah % 4 == 0) ) //ci je splnena podmienka
     {
         forkval = fork();
 
         if (forkval == 0)
           {                     //proces na vypisanie-------------------------------------------------------------------
-            key_t key= 25;
+          //  sleep(2);
+         //   sem_wait(&mutex);
+            key_t key= 26;
             int *s;
             int shmid = shmget(key, sizeof(int),0666);
-            int *shm = (int*) shmat(shmid, NULL, 0);
+              int *shm;
+              shm = (int *) shmat(shmid, NULL, 0);
             s =  shm;
             printf("Sucer prvocisel od %d do %d je: %d",dolna_hranica,horna_hranica,*s);
+         // shmdt(shm);
+         //   shmctl(shmid,IPC_RMID,NULL);
+          //  sem_post(&bin_sem);
 
-            exit(1);
+           exit(1);
 //.....................................................................................................................
           } else
               {
@@ -116,6 +127,7 @@ int main()
                 void *udaj;
                 void *rec;
                 void *rec2;
+
                 int *message;
                 udaj=(&udaje);
                 pthread_t tid1,tid2;
@@ -144,7 +156,7 @@ int main()
                     //pripojenie socketu
                 if (connect(sock_desc,(struct sockaddr*)&client, sizeof(client)) != 0)
                 {
-                    printf("cannot conncet to server\n");
+                    printf("cannot connect to server\n");
                     close(sock_desc);
                 }
 
@@ -192,16 +204,21 @@ int main()
                         finally_sum[0] += client_response[id];
                    //     printf("%d  ",client_response[id]);
                     }
-                    printf("\nkonecny vysledok: %d \n",finally_sum[0]);
-                    key_t key = 25;
-                    int shmid = shmget(key, sizeof(int),0666);
+                    printf("\nfinal result: %d \n",finally_sum[0]);
+                   // sem_post(&bin_sem);
+               //    sem_wait(&mutex);
+                    key_t key = 26;
+                    int shmid = shmget(key, sizeof(int),0666|IPC_CREAT);
                     int *shm = (int*)shmat(shmid,NULL,0);
                    int *s;
                    s=shm;
                    *s = finally_sum[0];
-
+                //    sem_post(&mutex);
                     close(sock_desc);
                     printf("server disconnected\n");
+
+                    sleep(2);
+                 //   sem_destroy(&mutex);
                     exit(1);
 
                 }

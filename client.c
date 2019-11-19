@@ -7,6 +7,8 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <sys/types.h>
+#include <sys/shm.h>
+#include <sys/ipc.h>
 
 int k=0;
 //1.vlakno...................................................................................................................................................
@@ -66,7 +68,7 @@ void * find(void *udaj) {
 int main()
  {
 
-    int id_klienta,dolna_hranica,horna_hranica,rozsah,Dolna_podhranica,Horna_podhranica,forkval,fd[2],nbytes;
+    int id_klienta,dolna_hranica,horna_hranica,rozsah,Dolna_podhranica,Horna_podhranica,forkval,nbytes,fd[2];
     pipe(fd);
 
     printf("Zadaj rozsah na vypocet, velkost rozsahu musi byt delitelna 4 a dolna hranica parna!\n");
@@ -77,13 +79,16 @@ int main()
         forkval = fork();
 
         if (forkval == 0)
-          {                     //proces na vypisanie
-            int readbuff;
-            close(fd[1]);
-            nbytes = read(fd[0], (void *) readbuff, sizeof(readbuff));
-            printf("Sucer prvocisel od %d do %d je: %d",dolna_hranica,horna_hranica,readbuff);
-            exit(1);
+          {                     //proces na vypisanie-------------------------------------------------------------------
+            key_t key= 25;
+            int *s;
+            int shmid = shmget(key, sizeof(int),0666);
+            int *shm = (int*) shmat(shmid, NULL, 0);
+            s =  shm;
+            printf("Sucer prvocisel od %d do %d je: %d",dolna_hranica,horna_hranica,*s);
 
+            exit(1);
+//.....................................................................................................................
           } else
               {
 
@@ -104,7 +109,7 @@ int main()
                 Dolna_podhranica = id_klienta*(rozsah/4) + dolna_hranica+1;
                 Horna_podhranica = id_klienta*(rozsah/4) + (rozsah/4) + dolna_hranica;
 
-                       printf("Ja som child %d a mam interval %d az %d\n", id_klienta,Dolna_podhranica,Horna_podhranica);
+                  //     printf("Ja som child %d a mam interval %d az %d\n", id_klienta,Dolna_podhranica,Horna_podhranica);
                 int udaje[2];
                     udaje[0]=Dolna_podhranica;
                     udaje[1]=Horna_podhranica;
@@ -119,7 +124,7 @@ int main()
                     pthread_create(&tid2,NULL,sum,(void*)rec);
                         pthread_join(tid2,&rec2);
                 message=(int*)rec2;
-                printf("vysledok: %d\n",*message);
+               // printf("vysledok: %d\n",*message);
 
                 //pipojenie na sockety..............................................................................
 
@@ -149,7 +154,7 @@ int main()
 
             } else
                 {
-                printf("\nJa som parent\n"); //server____________________________________________________________
+               // printf("\nJa som parent\n"); //server____________________________________________________________
                     //vytvorenie socketu
                     int sock_desc = socket(AF_INET,SOCK_STREAM,0);
                     if(sock_desc == -1)
@@ -177,19 +182,23 @@ int main()
                     }
                     int client[4],id;
                     int client_response[4];
-                    int finally_sum = 0;
+                    int *finally_sum;
+                    finally_sum = (int*)malloc(sizeof(int));
+                    finally_sum[0]=0;
                     for (id = 0;id < 4;id++)
                     {
                         client[id]= accept(sock_desc,NULL,NULL); //akceptovanie klientov
                         recv(client[id],&client_response[id], sizeof(client_response[id]),0); //pijatie sprav
-                        finally_sum += client_response[id];
-                        printf("%d  ",client_response[id]);
+                        finally_sum[0] += client_response[id];
+                   //     printf("%d  ",client_response[id]);
                     }
-                    printf("\nkonecny vysledok: %d \n",finally_sum);
-                    close(fd[0]);
-                    write(fd[1], finally_sum, sizeof(finally_sum));
-
-
+                    printf("\nkonecny vysledok: %d \n",finally_sum[0]);
+                    key_t key = 25;
+                    int shmid = shmget(key, sizeof(int),0666);
+                    int *shm = (int*)shmat(shmid,NULL,0);
+                   int *s;
+                   s=shm;
+                   *s = finally_sum[0];
 
                     close(sock_desc);
                     printf("server disconnected\n");

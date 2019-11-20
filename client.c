@@ -8,9 +8,8 @@
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <sys/shm.h>
-//#include <semaphore.h>
-//#include <sys/mman.h>
-
+#include <semaphore.h>
+#include <sys/mman.h>
 
 
 int k=0;
@@ -43,6 +42,9 @@ void * find(void *input) {
             i++;
         }
         prvocislo++;
+
+
+
     }
     output = (int *) malloc(k * sizeof(int));
     if (output == NULL) {
@@ -57,24 +59,29 @@ void * find(void *input) {
 //2.vlakno........................................................................................................................................
  void *sum(void *rec)
  {
+
   int *pole=(int*)rec;
   int *suma;
    suma = (int*)malloc(sizeof(int));
    suma[0]=0;
+
+
    int i;
-   for (i=0;i<k;i++)
+   for (i=0;i < k; i++)
        suma[0] += pole[i];
+
      return (void*)suma;
  }
 
-//sem_t bin_sem;
+ sem_t bin_sem;
 //----------------------------------------------------------------------------------------------------------------------
 int main()
  {
 
     int id_klienta,dolna_hranica,horna_hranica,rozsah,Dolna_podhranica,Horna_podhranica,forkval;
-   // sem_t mutex;
-  //  sem_init(&mutex,1,0);
+    sem_t klient;
+    sem_init(&bin_sem,1,1);
+
 
     printf("Zadaj rozsah na vypocet, velkost rozsahu musi byt delitelna 4!\n");
     scanf("%d %d",&dolna_hranica,&horna_hranica);
@@ -86,7 +93,9 @@ int main()
         if (forkval == 0)
           {                     //proces na vypisanie-------------------------------------------------------------------
           //  sleep(2);
-         //   sem_wait(&mutex);
+            sem_wait(&bin_sem);
+            sleep(2);
+            sem_post(&bin_sem);
             key_t key= 26;
             int *s;
             int shmid = shmget(key, sizeof(int),0666);
@@ -96,7 +105,7 @@ int main()
             printf("Sucer prvocisel od %d do %d je: %d",dolna_hranica,horna_hranica,*s);
          // shmdt(shm);
          //   shmctl(shmid,IPC_RMID,NULL);
-          //  sem_post(&bin_sem);
+           sem_destroy(&bin_sem);
 
            exit(1);
 //.....................................................................................................................
@@ -121,6 +130,7 @@ int main()
                 Horna_podhranica = id_klienta*(rozsah/4) + (rozsah/4) + dolna_hranica;
 
                   //     printf("Ja som child %d a mam interval %d az %d\n", id_klienta,Dolna_podhranica,Horna_podhranica);
+
                 int udaje[2];
                     udaje[0]=Dolna_podhranica;
                     udaje[1]=Horna_podhranica;
@@ -136,7 +146,8 @@ int main()
                     pthread_create(&tid2,NULL,sum,(void*)rec);
                         pthread_join(tid2,&rec2);
                 message=(int*)rec2;
-               // printf("vysledok: %d\n",*message);
+                printf("vysledok %d: %d\n",id_klienta,*message);
+
 
                 //pipojenie na sockety..............................................................................
 
@@ -161,7 +172,6 @@ int main()
                 }
 
                 send(sock_desc,message, sizeof(message),0); // posielanie dat
-
                 exit(1); //zabijanie
 
             } else
@@ -205,20 +215,15 @@ int main()
                    //     printf("%d  ",client_response[id]);
                     }
                     printf("\nfinal result: %d \n",finally_sum[0]);
-                   // sem_post(&bin_sem);
-               //    sem_wait(&mutex);
                     key_t key = 26;
                     int shmid = shmget(key, sizeof(int),0666|IPC_CREAT);
                     int *shm = (int*)shmat(shmid,NULL,0);
                    int *s;
                    s=shm;
                    *s = finally_sum[0];
-                //    sem_post(&mutex);
                     close(sock_desc);
                     printf("server disconnected\n");
-
                     sleep(2);
-                 //   sem_destroy(&mutex);
                     exit(1);
 
                 }

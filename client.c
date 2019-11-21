@@ -10,14 +10,18 @@
 #include <sys/shm.h>
 #include <semaphore.h>
 #include <sys/mman.h>
+#include <signal.h>
+sig_atomic_t volatile stop = 1;
+void vypis();
+void proces();
 
 
-int k=0;
+
 //1.vlakno...................................................................................................................................................
 void * find(void *input) {
 
 
-    int i, prvocislo = 2, j, l;
+    int i, prvocislo = 2, j, l,k=0;
     int prvocisla[100];
     int *output;
     int *hranice = (int *) (input); //novy pointer na int
@@ -42,6 +46,13 @@ void * find(void *input) {
             i++;
         }
         prvocislo++;
+       // printf("%d",k);
+        key_t key = 27;
+        int shmid_sec = shmget(key, sizeof(int),0666|IPC_CREAT);
+        int *shm_sec = (int*)shmat(shmid_sec,NULL,0);
+        int *s_sec;
+        s_sec=shm_sec;
+        *s_sec = k;
 
 
 
@@ -53,34 +64,45 @@ void * find(void *input) {
     }
     for (l = 0; l < k; l++) {
         output[l] = prvocisla[l];
+
     }
+
+
     return (void *) output;
 }
 //2.vlakno........................................................................................................................................
  void *sum(void *rec)
  {
+     key_t key= 28;
+     int *s_sec;
+     int shmid_sec = shmget(key, sizeof(int),0666);
+     int *shm_sec;
+     shm_sec = (int *) shmat(shmid_sec, NULL, 0);
+     s_sec =  shm_sec;
 
   int *pole=(int*)rec;
   int *suma;
    suma = (int*)malloc(sizeof(int));
    suma[0]=0;
-
+   int k = s_sec;
+   //printf("%d",k);
 
    int i;
    for (i=0;i < k; i++)
        suma[0] += pole[i];
 
+
      return (void*)suma;
  }
 
- sem_t bin_sem;
+
 //----------------------------------------------------------------------------------------------------------------------
 int main()
  {
 
     int id_klienta,dolna_hranica,horna_hranica,rozsah,Dolna_podhranica,Horna_podhranica,forkval;
-    sem_t klient;
-    sem_init(&bin_sem,1,1);
+
+
 
 
     printf("Zadaj rozsah na vypocet, velkost rozsahu musi byt delitelna 4!\n");
@@ -89,35 +111,27 @@ int main()
     if( (rozsah % 4 == 0) ) //ci je splnena podmienka
     {
         forkval = fork();
-
+        int pid_v = forkval;
         if (forkval == 0)
           {                     //proces na vypisanie-------------------------------------------------------------------
           //  sleep(2);
-            sem_wait(&bin_sem);
-            sleep(2);
-            sem_post(&bin_sem);
-            key_t key= 26;
-            int *s;
-            int shmid = shmget(key, sizeof(int),0666);
-              int *shm;
-              shm = (int *) shmat(shmid, NULL, 0);
-            s =  shm;
-            printf("Sucer prvocisel od %d do %d je: %d",dolna_hranica,horna_hranica,*s);
-         // shmdt(shm);
-         //   shmctl(shmid,IPC_RMID,NULL);
-           sem_destroy(&bin_sem);
+                while (1)
+              signal(SIGHUP,vypis);
+
 
            exit(1);
 //.....................................................................................................................
           } else
               {
 
+            int child_pid[4];
             for (id_klienta = 0; id_klienta < 4; id_klienta++)
             {                        //vytvaranie klientov
                 forkval = fork();
-
+                child_pid[id_klienta]=forkval;
                 if (forkval == 0)
                 {                    //aby sa nemnozili
+
                     break;
                 }
 
@@ -130,14 +144,14 @@ int main()
                 Horna_podhranica = id_klienta*(rozsah/4) + (rozsah/4) + dolna_hranica;
 
                   //     printf("Ja som child %d a mam interval %d az %d\n", id_klienta,Dolna_podhranica,Horna_podhranica);
-
+                while(stop)
+                    signal(SIGHUP,proces);
                 int udaje[2];
                     udaje[0]=Dolna_podhranica;
                     udaje[1]=Horna_podhranica;
                 void *udaj;
                 void *rec;
                 void *rec2;
-
                 int *message;
                 udaj=(&udaje);
                 pthread_t tid1,tid2;
@@ -178,6 +192,7 @@ int main()
                 {
                // printf("\nJa som parent\n"); //server____________________________________________________________
                     //vytvorenie socketu
+                    kill(child_pid[0],SIGHUP);
                     int sock_desc = socket(AF_INET,SOCK_STREAM,0);
                     if(sock_desc == -1)
                     {
@@ -212,6 +227,7 @@ int main()
                         client[id]= accept(sock_desc,NULL,NULL); //akceptovanie klientov
                         recv(client[id],&client_response[id], sizeof(client_response[id]),0); //pijatie sprav
                         finally_sum[0] += client_response[id];
+                        kill(child_pid[id+1],SIGHUP);
                    //     printf("%d  ",client_response[id]);
                     }
                     printf("\nfinal result: %d \n",finally_sum[0]);
@@ -221,6 +237,7 @@ int main()
                    int *s;
                    s=shm;
                    *s = finally_sum[0];
+                   kill(pid_v,SIGHUP);
                     close(sock_desc);
                     printf("server disconnected\n");
                     sleep(2);
@@ -233,4 +250,21 @@ int main()
 
 
     return 0;
+}
+void vypis()
+{
+
+   key_t key= 26;
+    int *s;
+    int shmid = shmget(key, sizeof(int),0666);
+    int *shm;
+    shm = (int *) shmat(shmid, NULL, 0);
+    s =  shm;
+    printf("Sucer prvocisel je: %d",*s);
+    exit(1);
+}
+
+void proces()
+{
+    stop = 0;
 }

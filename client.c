@@ -277,5 +277,5 @@ void write_function()
 
 void process_start()
 {
-    stop = 0;
+    stop = 0; //
 }

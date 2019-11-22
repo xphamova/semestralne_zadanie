@@ -7,3 +7,4 @@ find_package(Threads REQUIRED)
 
 add_executable(seme client.c)
 target_link_libraries(seme Threads::Threads)
+target_link_libraries(seme -lrt)

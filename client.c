@@ -9,9 +9,12 @@
 #include <sys/types.h>
 #include <sys/shm.h>
 #include <signal.h>
+#include <time.h>
 
 sig_atomic_t volatile stop = 1;
+timer_t  make_timer(int);
 
+void start_timer(timer_t,int);
 void write_function();
 void process_start();
 
@@ -111,7 +114,7 @@ int main()
         int pid_v = forkval;
         if (forkval == 0)
           {                     //proces na vypisanie-------------------------------------------------------------------
-                while (1)
+                    while (1)
                     signal(SIGHUP, write_function);
                                //.......................................................................................
           } else
@@ -248,15 +251,16 @@ int main()
                     //start write process
                                  kill(pid_v,SIGHUP);
                                  close(sock_desc);
-                                 // printf("server disconnected\n");
 
-                             exit(1);
+                                 // printf("server disconnected\n");
+                              //  sleep(7);
+                             //exit(1);
                         }
                 }
 
     } else printf("Zadal si zly interval!\n");
 
-
+   // sleep(7);
     return 0;
 }
 void write_function()
@@ -272,10 +276,35 @@ void write_function()
         printf("\nSucet prvocisel je: %d",*s);
         shmctl(shmid,IPC_RMID,NULL);
 
-    exit(1);
+    timer_t timer;
+    timer = make_timer(SIGKILL);
+    start_timer(timer,5);
+    printf("\n5sek");
+   // exit(1);
 }
 
 void process_start()
 {
     stop = 0; //
+}
+
+timer_t make_timer(int signal)
+{
+    struct sigevent where;
+    where.sigev_notify=SIGEV_SIGNAL;
+    where.sigev_signo=signal;
+
+    timer_t timer;
+    timer_create(CLOCK_REALTIME, &where, &timer);
+    return (timer);
+}
+
+void start_timer(timer_t timer,int seconds)
+{
+    struct itimerspec time;
+    time.it_value.tv_sec = seconds;
+    time.it_value.tv_nsec = 0;
+    time.it_interval.tv_sec = 0;
+    time.it_interval.tv_nsec = 0;
+    timer_settime(timer,CLOCK_REALTIME,&time,NULL);
 }

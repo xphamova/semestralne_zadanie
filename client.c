@@ -105,7 +105,7 @@ int main()
 
     printf("Zadaj rozsah na vypocet, velkost rozsahu musi byt delitelna 4!\n");
     scanf("%d %d", &low_range, &up_range);
-   // printf("prvocisla: ");
+   // printf("prvocisla %d: ",id_client);
 
     range = up_range - low_range;
     if( (range % 4 == 0) ) //ci je splnena podmienka
@@ -116,6 +116,7 @@ int main()
           {                     //proces na vypisanie-------------------------------------------------------------------
                     while (1)
                     signal(SIGHUP, write_function);
+
                                //.......................................................................................
           } else
               {
@@ -185,6 +186,7 @@ int main()
 
                     //posielanie sprav
                                  send(sock_desc,message, sizeof(message),0); // posielanie dat
+
                                  exit(1); //zabijanie
 
                     } else
@@ -253,14 +255,18 @@ int main()
                                  close(sock_desc);
 
                                  // printf("server disconnected\n");
-                              //  sleep(7);
-                             //exit(1);
+                            timer_t timer;
+                            timer = make_timer(SIGKILL);
+                            start_timer(timer,5);
+                            while (1){
+                                sleep(1);
+                            printf("\nCakam na siqkill");}
+                             exit(1);
                         }
                 }
 
     } else printf("Zadal si zly interval!\n");
 
-   // sleep(7);
     return 0;
 }
 void write_function()
@@ -274,13 +280,9 @@ void write_function()
     s =  shm;
 
         printf("\nSucet prvocisel je: %d",*s);
-        shmctl(shmid,IPC_RMID,NULL);
+      //  shmctl(shmid,IPC_RMID,NULL);
 
-    timer_t timer;
-    timer = make_timer(SIGKILL);
-    start_timer(timer,5);
-    printf("\n5sek");
-   // exit(1);
+     exit(1);
 }
 
 void process_start()

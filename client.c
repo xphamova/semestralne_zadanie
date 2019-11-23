@@ -11,7 +11,7 @@
 #include <signal.h>
 #include <time.h>
 
-sig_atomic_t volatile stop = 1;
+sig_atomic_t volatile stop = 1;//Celočíselný typ, ku ktorému je možné pristupovať ako k atómovej entite aj za prítomnosti asynchrónnych prerušení vyvolaných signálmi
 timer_t  make_timer(int);
 
 void start_timer(timer_t,int);
@@ -19,12 +19,12 @@ void write_function();
 void process_start();
 
 
-//1.vlakno...................................................................................................................................................
+//1.thread...................................................................................................................................................
 void * find(void *input)
 {
          int i, j, l,count=0,primes[100];
          int *output;
-         int *interval = (int *) (input); //novy pointer na int
+         int *interval = (int *) (input); //new pointer on int
 
     //shared memory
         key_t key = 26;
@@ -33,8 +33,8 @@ void * find(void *input)
         int *s;
             s=shm;
 
-        int First_possible_prime = *(interval); //nahram dolnu hranicu
-        int Last_possible_prime = *(interval + 1); //nahram hornu hranicu
+        int First_possible_prime = *(interval); //get  low range
+        int Last_possible_prime = *(interval + 1); //get up range
         int prime = First_possible_prime;
 
     //find primes
@@ -43,12 +43,12 @@ void * find(void *input)
 
             for (j = 2; j <= prime; j++)
             {
-                if (prime % j == 0) // zistujem delitelnosti cisla
+                if (prime % j == 0) // find  prime
                     break;
             }
-            if (j == prime) //
+            if (j == prime) //test prime
             {
-                primes[count] = prime; // zapisanie prvocisel do pola
+                primes[count] = prime; // write prime
                      count++;
             }
         prime++;
@@ -74,7 +74,7 @@ void * find(void *input)
     return (void *) output;
 }
 
-//2.vlakno........................................................................................................................................
+//2.thread........................................................................................................................................
  void *sum(void *send_primes)
  {
      //shared memory
@@ -101,19 +101,18 @@ void * find(void *input)
 int main()
  {
 
-    int id_client,low_range,up_range,range,client_low_range,client_up_range,forkval;
+    int id_client,low_range,up_range,range,client_low_range,client_up_range,forkvalue;
 
     printf("Zadaj rozsah na vypocet, velkost rozsahu musi byt delitelna 4!\n");
     scanf("%d %d", &low_range, &up_range);
-   // printf("prvocisla %d: ",id_client);
 
     range = up_range - low_range;
-    if( (range % 4 == 0) ) //ci je splnena podmienka
+    if( (range % 4 == 0) ) //check
     {
-        forkval = fork();
-        int pid_v = forkval;
-        if (forkval == 0)
-          {                     //proces na vypisanie-------------------------------------------------------------------
+        forkvalue = fork();
+        int pid_v = forkvalue;
+        if (forkvalue == 0)
+          {                     //write process-------------------------------------------------------------------------
                     while (1)
                     signal(SIGHUP, write_function);
 
@@ -124,17 +123,17 @@ int main()
         //make client
                 for (id_client = 0; id_client < 4; id_client++)
                 {
-                    forkval = fork();
-                    child_pid[id_client]=forkval;
-                         if (forkval == 0)
-                          {                    //aby sa nemnozili
+                    forkvalue = fork();
+                    child_pid[id_client]=forkvalue;
+                         if (forkvalue == 0)
+                          {                    //stop other process
                              break;
                           }
                 }
 
-                 if (forkval == 0)
+                 if (forkvalue == 0)
                     {
-    //klienti__________________________________________________________________________________________________________
+    //clients__________________________________________________________________________________________________________
                         client_low_range = id_client * (range / 4) + low_range + 1;
                         client_up_range = id_client * (range / 4) + (range / 4) + low_range;
                         // printf("Ja som child %d a mam interval %d az %d\n", id_client,client_low_range,client_up_range);
@@ -153,16 +152,16 @@ int main()
                                  send_range=(&interval_range);
 
                             pthread_t tid1,tid2;
-                                pthread_create(&tid1, NULL, find ,(void*)send_range);//spustenie vlakna
+                                pthread_create(&tid1, NULL, find ,(void*)send_range);//start thread
                                      pthread_join(tid1,&receive_primes);
                                 pthread_create(&tid2,NULL,sum,(void*)receive_primes);
                                      pthread_join(tid2,&client_sum);
                              message=(int*)client_sum;
                            // printf("vysledok %d: %d\n",id_klienta,*message);
 
-                //pipojenie na sockety..................................................................................
+                //connect on socket..................................................................................
 
-                    // vytvorenie socketu
+                    // make socket
                                  int sock_desc = socket(AF_INET,SOCK_STREAM,0);
                                   if (sock_desc == -1)
                                     {
@@ -170,31 +169,31 @@ int main()
                                         return 0;
                                     }
 
-                    //nastavenie socketu
+                    //settings socket
                                  struct sockaddr_in client;
                                   memset(&client,0, sizeof(client));
                                   client.sin_family = AF_INET;
                                   client.sin_addr.s_addr = inet_addr("127.0.0.1");
                                   client.sin_port=htons(59836);
 
-                    //pripojenie socketu
+                    //connect socket
                                   if (connect(sock_desc,(struct sockaddr*)&client, sizeof(client)) != 0)
                                   {
                                      printf("cannot connect to server\n");
                                      close(sock_desc);
                                   }
 
-                    //posielanie sprav
-                                 send(sock_desc,message, sizeof(message),0); // posielanie dat
+                    //send message
+                                 send(sock_desc,message, sizeof(message),0);
 
-                                 exit(1); //zabijanie
+                                 exit(1); //kill
 
                     } else
                         {
      //server__________________________________________________________________________________________________________
                      // printf("\nJa som parent\n");
-                    //vytvorenie socketu
-                                 kill(child_pid[0],SIGHUP);
+                    //make socket
+                                 kill(child_pid[0],SIGHUP); //start first client
                                 int sock_desc = socket(AF_INET,SOCK_STREAM,0);
                                 if(sock_desc == -1)
                                 {
@@ -202,16 +201,16 @@ int main()
                                     return 0;
                                  }
 
-                    //nastavenie socketu
+                    //setting socket
                                  struct sockaddr_in server;
-                                 memset(&server,0,sizeof(server)); //naplni nulami
+                                 memset(&server,0,sizeof(server)); //filling zero
                                  server.sin_family = AF_INET; //aky
-                                 server.sin_addr.s_addr = INADDR_ANY; //s ktorej ip sa da prihlasit
-                                 server.sin_port = htons(59836); //nastavenie portu
+                                 server.sin_addr.s_addr = INADDR_ANY; //who can connect
+                                 server.sin_port = htons(59836); //setting port
                     //bind
-                                 if (bind(sock_desc, (struct sockaddr*)&server, sizeof(server)) != 0) // ked neprejde port je obsadeny
+                                 if (bind(sock_desc, (struct sockaddr*)&server, sizeof(server)) != 0) // true - busy port
                                   {
-                                    printf("cannot bind socket!\n");//nepresiel port
+                                    printf("cannot bind socket!\n");
                                     close(sock_desc);
                                      return 0;
                                   }
@@ -233,10 +232,10 @@ int main()
                     //accept,recv
                                  for (id = 0;id < 4;id++)
                                  {
-                                     accept_client[id]= accept(sock_desc, NULL, NULL); //akceptovanie klientov
-                                    recv(accept_client[id], &client_response[id], sizeof(client_response[id]), 0); //pijatie sprav
-                                    finally_sum[0] += client_response[id];
-                                    kill(child_pid[id+1],SIGHUP);
+                                     accept_client[id]= accept(sock_desc, NULL, NULL); //accept client
+                                    recv(accept_client[id], &client_response[id], sizeof(client_response[id]), 0); //received message
+                                    finally_sum[0] += client_response[id];//sum
+                                    kill(child_pid[id+1],SIGHUP);//start other clients
                                    //     printf("%d  ",client_response[id]);
                                  }
 
@@ -256,7 +255,7 @@ int main()
 
                                  // printf("server disconnected\n");
                             timer_t timer;
-                            timer = make_timer(SIGKILL);
+                            timer = make_timer(SIGKILL);//id
                             start_timer(timer,5);
                             while (1){
                                 sleep(1);
@@ -287,18 +286,18 @@ void write_function()
 
 void process_start()
 {
-    stop = 0; //
+    stop = 0;
 }
 
 timer_t make_timer(int signal)
 {
     struct sigevent where;
-    where.sigev_notify=SIGEV_SIGNAL;
+    where.sigev_notify=SIGEV_SIGNAL;//SIGEV_SIGNAl upon timer expiration, generate the signal sigev_signo
     where.sigev_signo=signal;
 
     timer_t timer;
     timer_create(CLOCK_REALTIME, &where, &timer);
-    return (timer);
+    return (timer);//id
 }
 
 void start_timer(timer_t timer,int seconds)

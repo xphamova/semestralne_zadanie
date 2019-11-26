@@ -15,7 +15,7 @@
 #include <wait.h>
 
 
-volatile sig_atomic_t stop=0;//Celočíselný typ, ku ktorému je možné pristupovať ako k atómovej entite aj za prítomnosti asynchrónnych prerušení vyvolaných signálmi
+volatile sig_atomic_t stop = 1;//Celočíselný typ, ku ktorému je možné pristupovať ako k atómovej entite aj za prítomnosti asynchrónnych prerušení vyvolaných signálmi
 
 timer_t make_timer(int);
 void start_timer(timer_t, int);
@@ -109,7 +109,7 @@ int main() {
 
     printf("Zadaj rozsah na vypocet, velkost rozsahu musi byt delitelna 4!\n");
     scanf("%d %d", &low_range, &up_range);
-   // printf("prvocislo\n");
+    printf("prvocisla\n");
 
     range = up_range - low_range;
     if ((range % 4 == 0)) //check
@@ -143,20 +143,12 @@ int main() {
 
                 client_low_range = ((id_client) * (range / 4)) + low_range + 1;
                 client_up_range = ((id_client) * (range / 4)) + (range / 4) + low_range;
-                printf("Ja som child %d  a mam interval %d az %d\n", id_client, client_low_range, client_up_range);
+               // printf("Ja som child %d  a mam interval %d az %d\n", id_client, client_low_range, client_up_range);
                // printf("aaaaaaaaa\n");
                 //wait on server
-               // sleep(3);
-              // int stat;
-                //waitpid(child_pid[id_client],&stat,0);
-                        sigset_t mask, oldmask;
-                        sigemptyset(&mask);
-                        sigaddset(&mask,SIGUSR1);
+               while (stop)
+                   signal(SIGHUP,process_start);
 
-                        sigprocmask(SIG_BLOCK,&mask,&oldmask);
-                        while (!&siginterrupt)
-                            sigsuspend(&oldmask);
-                        sigprocmask(SIG_UNBLOCK,&mask,NULL);
 
                 int interval_range[2];
                 interval_range[0] = client_low_range;
@@ -205,13 +197,11 @@ int main() {
 
             } else {
                 //server__________________________________________________________________________________________________________
-               //  sleep(3);
-               //int stat;
-                //    for(int i =0 ; i<4;i++){
-                 //       waitpid(child_pid[i],&stat,0);
-                   // }
+
+
+
                 //make socket
-                //kill(child_pid[0],SIGHUP);
+
                 int sock_desc = socket(AF_INET, SOCK_STREAM, 0);
                 if (sock_desc == -1) {
                     printf("cannot create socket!\n");
@@ -239,22 +229,24 @@ int main() {
                     return 0;
                 }
                // printf("nieco");
-                 printf("poslal");
+              //   printf("poslal");
                 int accept_client[6], id;
                 int client_response[6];
                 int *finally_sum;
                 finally_sum = (int *) malloc(sizeof(int));
                 finally_sum[0] = 0;
 
+
                 //accept,recv
-               // kill(child_pid[0], SIGHUP);
+
+
                 for (id = 0; id < 4; id++) {
-                    kill(child_pid[id], SIGCONT);
+                    kill(child_pid[id], SIGHUP);
                     accept_client[id] = accept(sock_desc, NULL, NULL); //accept client
-                    printf("acce\n");
+                 //   printf("acce\n");
                     recv(accept_client[id], &client_response[id], sizeof(client_response[id]), 0); //received message
                     finally_sum[0] += client_response[id];//sum
-                   // kill(child_pid[id+1], SIGHUP);//start other clients
+              //      kill(child_pid[id+1], SIGHUP);//start other clients
                     //     printf("%d  ",client_response[id]);
                 }
 
@@ -308,7 +300,7 @@ void write_function() {
 void process_start()
 {
     signal(SIGHUP,process_start);
-    stop = 1;
+    stop = 0;
 }
 
 timer_t make_timer(int signal) {

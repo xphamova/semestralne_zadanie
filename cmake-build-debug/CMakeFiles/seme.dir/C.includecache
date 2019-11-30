@@ -31,10 +31,4 @@ signal.h
 -
 time.h
 -
-semaphore.h
--
-stdbool.h
--
-wait.h
--
 

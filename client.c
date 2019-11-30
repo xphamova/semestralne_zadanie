@@ -10,20 +10,18 @@
 #include <sys/shm.h>
 #include <signal.h>
 #include <time.h>
-#include <semaphore.h>
-#include <stdbool.h>
-#include <wait.h>
 
 
-volatile sig_atomic_t stop = 1;//Celočíselný typ, ku ktorému je možné pristupovať ako k atómovej entite aj za prítomnosti asynchrónnych prerušení vyvolaných signálmi
 
+volatile sig_atomic_t stop = 1; //Celočíselný typ, ku ktorému je možné pristupovať ako k atómovej entite aj za prítomnosti asynchrónnych prerušení vyvolaných signálmi
+volatile sig_atomic_t server_s = 1;
 timer_t make_timer(int);
 void start_timer(timer_t, int);
 
 void write_function();
 
 void process_start();
-int sigwait(const sigset_t *set,int *sig);
+void server_start();
 
 
 //1.thread...................................................................................................................................................
@@ -105,6 +103,7 @@ int main() {
     int forkval;
     int child_pid[4];
     int id_client;
+    pid_t id_server;
 
 
     printf("Zadaj rozsah na vypocet, velkost rozsahu musi byt delitelna 4!\n");
@@ -130,24 +129,25 @@ int main() {
             //make client
             for (id_client = 0; id_client < 4; id_client++) {
                 child_pid[id_client]=  forkval= fork();
-
+                id_server = getppid();
                 if (forkval == 0) {                    //stop other process
-                    forkval = 0;
                     break;
                 }
 
+              //  printf("%d",id_client);
             }
-
             if (forkval == 0) {
                 //clients__________________________________________________________________________________________________________
-
+                if (id_client == 3){
+                    kill(getppid(),SIGHUP);
+                }
                 client_low_range = ((id_client) * (range / 4)) + low_range + 1;
                 client_up_range = ((id_client) * (range / 4)) + (range / 4) + low_range;
-               // printf("Ja som child %d  a mam interval %d az %d\n", id_client, client_low_range, client_up_range);
-               // printf("aaaaaaaaa\n");
+                printf("Ja som child %d  a mam interval %d az %d\n", id_client, client_low_range, client_up_range);
                 //wait on server
+
                while (stop)
-                   signal(SIGHUP,process_start);
+                  signal(SIGHUP,process_start);
 
 
                 int interval_range[2];
@@ -197,10 +197,12 @@ int main() {
 
             } else {
                 //server__________________________________________________________________________________________________________
-
-
-
                 //make socket
+
+
+                while (server_s)
+                signal(SIGHUP,server_start);
+              //  sleep(2);
 
                 int sock_desc = socket(AF_INET, SOCK_STREAM, 0);
                 if (sock_desc == -1) {
@@ -215,7 +217,7 @@ int main() {
                 server.sin_addr.s_addr = INADDR_ANY; //who can connect
                 server.sin_port = htons(59837); //setting port
                 //bind
-              //  printf("ni");
+
                 if (bind(sock_desc, (struct sockaddr *) &server, sizeof(server)) != 0) // true - busy port
                 {
                     printf("cannot bind socket!\n");
@@ -228,8 +230,7 @@ int main() {
                     close(sock_desc);
                     return 0;
                 }
-               // printf("nieco");
-              //   printf("poslal");
+
                 int accept_client[6], id;
                 int client_response[6];
                 int *finally_sum;
@@ -243,14 +244,10 @@ int main() {
                 for (id = 0; id < 4; id++) {
                     kill(child_pid[id], SIGHUP);
                     accept_client[id] = accept(sock_desc, NULL, NULL); //accept client
-                 //   printf("acce\n");
                     recv(accept_client[id], &client_response[id], sizeof(client_response[id]), 0); //received message
                     finally_sum[0] += client_response[id];//sum
-              //      kill(child_pid[id+1], SIGHUP);//start other clients
-                    //     printf("%d  ",client_response[id]);
                 }
 
-                // printf("\nfinal result: %d \n",finally_sum[0]);
 
                 //shared memory
                 key_t key = 26;
@@ -274,6 +271,7 @@ int main() {
                 }
                 exit(1);
             }
+
         }
 
     } else printf("Zadal si zly interval!\n");
@@ -301,6 +299,12 @@ void process_start()
 {
     signal(SIGHUP,process_start);
     stop = 0;
+}
+
+void server_start()
+{
+    signal(SIGHUP,server_start);
+    server_s = 0;
 }
 
 timer_t make_timer(int signal) {
